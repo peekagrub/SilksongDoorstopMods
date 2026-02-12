@@ -1,13 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.1</TargetFrameworks>
     <LangVersion>10</LangVersion>
     <Nullable>enable</Nullable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <SilksongRefs>./SilksongRefs</SilksongRefs>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="$(SilksongRefs)/Unity*.dll" />
+    <Reference Include="$(SilksongRefs)/Assembly-CSharp.dll" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Mono.Cecil" Version="0.11.6" />
   </ItemGroup>
+
+  <ItemGroup>
+    <OutputFiles Include="$(TargetDir)/SilksongDoorstop*" />
+    <OutputFiles Include="$(TargetDir)/Mono*" />
+    <DoorstopFiles Include="doorstop_config/*" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <RemoveDir Condition="Exists('Output')" Directories="Output" />
+    <Copy SourceFiles="@(DoorstopFiles)" DestinationFolder="Output" />
+    <Copy SourceFiles="@(OutputFiles)" DestinationFolder="Output/doorstop_mods" />
+    <ZipDirectory SourceDirectory="Output" DestinationFile="Output.zip" />
+  </Target>
 
 </Project>
