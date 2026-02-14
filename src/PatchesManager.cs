@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using SilksongDoorstop.Patches;
@@ -6,15 +7,20 @@ namespace SilksongDoorstop;
 
 internal class PatchesManager
 {
-    private OnGUIPatch _onGui;
+    private List<Patch> _patches;
 
     public PatchesManager(ModuleDefinition _targetModule, ModuleDefinition _sourceModule)
     {
-        _onGui = new(_targetModule, _sourceModule);
+        _patches = new List<Patch> {
+            new OnGUIPatch(_targetModule, _sourceModule),
+        };
     }
 
     public void ApplyPatches()
     {
-        _onGui.ApplyPatch();
+        foreach (Patch patch in _patches)
+        {
+            patch.ApplyPatch();
+        }
     }
 }
