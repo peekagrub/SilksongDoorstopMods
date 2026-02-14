@@ -27,6 +27,7 @@
     <RemoveDir Condition="Exists('Output')" Directories="Output" />
     <Copy SourceFiles="@(DoorstopFiles)" DestinationFolder="Output" />
     <Copy SourceFiles="@(OutputFiles)" DestinationFolder="Output/doorstop_mods" />
+    <Delete Condition="Exists('Output.zip')" Files="Output.zip" />
     <ZipDirectory SourceDirectory="Output" DestinationFile="Output.zip" />
   </Target>
 
