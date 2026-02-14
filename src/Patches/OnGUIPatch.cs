@@ -1,13 +1,27 @@
 using System;
+using Mono.Cecil;
 using UnityEngine;
+using SilksongDoorstop;
 
 namespace SilksongDoorstop.Patches;
 
-public class GameManagerPatch : global::GameManager
+internal class OnGUIPatch : Patch
+{
+    public OnGUIPatch(ModuleDefinition targetModule, ModuleDefinition sourceModule)
+        : base(targetModule, sourceModule, "GameManager", "OnGUI") { }
+
+    override public void ApplyPatch()
+    {
+        ILProcessor.Clear();
+        CopySourceMethod();
+    }
+}
+
+internal class GameManager : global::GameManager
 {
     private void OnGUI()
     {
-        if (this.GetSceneNameString() == Constants.MENU_SCENE)
+        if (GetSceneNameString() == Constants.MENU_SCENE)
         {
             var oldBackgroundColor = GUI.backgroundColor;
             var oldContentColor = GUI.contentColor;
