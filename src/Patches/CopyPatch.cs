@@ -3,36 +3,31 @@ using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
-namespace SilksongDoorstop;
+namespace SilksongDoorstop.Patches;
 
-internal abstract class Patch
+internal abstract class CopyPatch : Patch
 {
     private ModuleDefinition _targetModule;
+    private ModuleDefinition _sourceModule;
 
-    private MethodDefinition _targetMethod;
-    private MethodDefinition _sourceMethod;
+    protected MethodDefinition _targetMethod;
+    protected MethodDefinition _sourceMethod;
 
-    private ILProcessor? _ilProcessor;
-
-    protected ILProcessor ILProcessor
+    public CopyPatch(ModuleDefinition targetModule, ModuleDefinition sourceModule, string typeName, string methodName)
     {
-        get
-        {
-            _ilProcessor ??= _targetMethod.Body.GetILProcessor();
-            return _ilProcessor;
-        }
-    }
-
-    public Patch(ModuleDefinition targetModule, ModuleDefinition sourceModule, string typeName, string methodName)
-    {
-        TypeDefinition sourceType = sourceModule.GetType($"SilksongDoorstop.Patches.{typeName}");
+        _sourceModule = sourceModule;
+        TypeDefinition sourceType = _sourceModule.GetType($"SilksongDoorstop.Patches.{typeName}");
         _sourceMethod = sourceType.Methods.First(method => method.Name == methodName);
 
         _targetModule = targetModule;
         TypeDefinition targetType = _targetModule.GetType(typeName);
         try
         {
-            _targetMethod = targetType.Methods.First(method => method.Name == methodName);
+            _targetMethod = targetType.Methods.First(method =>
+                method.Name == methodName &&
+                method.Parameters.Count == _sourceMethod.Parameters.Count &&
+                method.Parameters.SequenceEqual(_sourceMethod.Parameters)
+            );
         }
         catch (Exception)
         {
@@ -41,12 +36,20 @@ internal abstract class Patch
         }
     }
 
-    public abstract void ApplyPatch();
-
-    protected void CopySourceMethod()
+    virtual public void ApplyPatch()
     {
+        CopyParameters();
         CopyLocals();
         CopyCode();
+    }
+
+    protected void CopyParameters()
+    {
+        foreach (ParameterDefinition paramDef in _sourceMethod.Parameters)
+        {
+            paramDef.ParameterType = _targetModule.ImportReference(paramDef.ParameterType);
+            _targetMethod.Parameters.Add(paramDef);
+        }
     }
 
     protected void CopyLocals()
@@ -62,7 +65,7 @@ internal abstract class Patch
 
     protected void CopyCode()
     {
-        ILProcessor il = ILProcessor;
+        ILProcessor il = _targetMethod.Body.GetILProcessor();
 
         foreach (Instruction inst in _sourceMethod.Body.Instructions)
         {

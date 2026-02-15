@@ -7,13 +7,57 @@ namespace SilksongDoorstop;
 
 internal class PatchesManager
 {
+    internal class Settings
+    {
+        internal struct SettingData
+        {
+            public bool activated;
+            public string message;
+        }
+
+        internal Dictionary<string, SettingData> data = new();
+
+        internal SettingData Downdash
+        {
+            get
+            {
+                return data.GetValueOrDefault("downdash", new SettingData
+                {
+                    activated = false,
+                    message = "Downdash Mod Activated"
+                });
+            }
+            set
+            {
+                if (data.TryGetValue("downdash", out SettingData downdash))
+                {
+                    downdash.activated = value.activated;
+                    downdash.message = value.message;
+                } else {
+                    data.Add("downdash", value);
+                }
+            }
+        }
+    };
+
+    private Settings _settings;
     private List<Patch> _patches;
 
     public PatchesManager(ModuleDefinition _targetModule, ModuleDefinition _sourceModule)
     {
+        _settings = new();
+        // Settings.SettingData downdash = _settings.Downdash;
+        // downdash.activated = true;
+        // _settings.Downdash = downdash;
+
         _patches = new List<Patch> {
-            new OnGUIPatch(_targetModule, _sourceModule),
+            new OnGUIPatch(_targetModule, _sourceModule, _settings),
         };
+
+        if (_settings.Downdash.activated)
+        {
+            _patches.Add(new DowndashPatch(_targetModule));
+        }
     }
 
     public void ApplyPatches()

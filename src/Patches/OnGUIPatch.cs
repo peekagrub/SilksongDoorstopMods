@@ -1,19 +1,42 @@
 using System;
+using System.Linq;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
 using UnityEngine;
 using SilksongDoorstop;
 
 namespace SilksongDoorstop.Patches;
 
-internal class OnGUIPatch : Patch
+internal class OnGUIPatch : CopyPatch
 {
-    public OnGUIPatch(ModuleDefinition targetModule, ModuleDefinition sourceModule)
-        : base(targetModule, sourceModule, "GameManager", "OnGUI") { }
+    private readonly string _warningText;
+
+    public OnGUIPatch(ModuleDefinition targetModule, ModuleDefinition sourceModule, PatchesManager.Settings settings)
+        : base(targetModule, sourceModule, "GameManager", "OnGUI")
+    {
+        foreach (PatchesManager.Settings.SettingData data in settings.data.Values)
+        {
+            if (data.activated)
+            {
+                _warningText += data.message + '\n';
+            }
+        }
+        _warningText += "Doorstop Patches";
+    }
 
     override public void ApplyPatch()
     {
-        ILProcessor.Clear();
-        CopySourceMethod();
+        ILProcessor il = _targetMethod.Body.GetILProcessor();
+        il.Clear();
+
+        base.ApplyPatch();
+
+        Instruction toReplace = il.Body.Instructions.First(inst =>
+            inst.OpCode == OpCodes.Ldstr &&
+            ((string)inst.Operand) == "<PlaceHolder>"
+        );
+
+        il.Replace(toReplace, il.Create(OpCodes.Ldstr, _warningText));
     }
 }
 
@@ -21,6 +44,8 @@ internal class GameManager : global::GameManager
 {
     private void OnGUI()
     {
+        string WarningText = "<PlaceHolder>";
+
         if (GetSceneNameString() == Constants.MENU_SCENE)
         {
             var oldBackgroundColor = GUI.backgroundColor;
@@ -36,8 +61,6 @@ internal class GameManager : global::GameManager
                 Quaternion.identity,
                 new Vector3(Screen.width / 1920f, Screen.height / 1080f, 1f)
             );
-
-            string WarningText = "Doorstop Patches";
 
             GUI.Label(
                 new Rect(20f, 20f, 200f, 200f),
